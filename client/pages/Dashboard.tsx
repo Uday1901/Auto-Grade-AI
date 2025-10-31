@@ -2,35 +2,56 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+import { AnalyticsData } from "@shared/api";
+import { toast } from "sonner";
 
 const COLORS = ["#6366F1", "#06B6D4", "#22C55E", "#F59E0B", "#EF4444"]; // indigo, cyan, green, amber, red
 
-function useSampleData() {
-  return useMemo(
-    () => ({
-      byClass: [
-        { name: "Class A", avg: 78 },
-        { name: "Class B", avg: 72 },
-        { name: "Class C", avg: 85 },
-        { name: "Class D", avg: 68 },
-      ],
-      trend: Array.from({ length: 10 }, (_, i) => ({ day: `W${i + 1}`, score: 60 + Math.round(Math.random() * 35) })),
-      distribution: [
-        { name: "A", value: 22 },
-        { name: "B", value: 35 },
-        { name: "C", value: 28 },
-        { name: "D", value: 11 },
-        { name: "F", value: 4 },
-      ],
-      recent: Array.from({ length: 8 }).map((_, i) => ({ id: i + 1, student: `Student ${i + 1}`, score: 55 + Math.round(Math.random() * 45) })),
-    }),
-    []
-  );
-}
-
 export default function Dashboard() {
-  const data = useSampleData();
+  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchAnalytics() {
+      try {
+        setLoading(true);
+        const response = await api.getAnalytics();
+        if (response.success) {
+          setData(response.data);
+        }
+      } catch (error) {
+        toast.error("Failed to load analytics", {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchAnalytics();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="container py-10">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading analytics...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="container py-10">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">No data available</p>
+        </div>
+      </div>
+    );
+  }
 
   const exportCsv = () => {
     const rows = [
@@ -59,19 +80,25 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle>Students Graded</CardTitle>
           </CardHeader>
-          <CardContent className="text-3xl font-bold">1,248</CardContent>
+          <CardContent className="text-3xl font-bold">
+            {data.overview.studentsGraded.toLocaleString()}
+          </CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle>Average Score</CardTitle>
           </CardHeader>
-          <CardContent className="text-3xl font-bold">76%</CardContent>
+          <CardContent className="text-3xl font-bold">
+            {data.overview.averageScore}%
+          </CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle>Time Saved</CardTitle>
           </CardHeader>
-          <CardContent className="text-3xl font-bold">~62 hrs</CardContent>
+          <CardContent className="text-3xl font-bold">
+            ~{data.overview.timeSaved} hrs
+          </CardContent>
         </Card>
       </div>
 

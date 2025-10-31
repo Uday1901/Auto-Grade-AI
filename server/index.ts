@@ -2,6 +2,13 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
+import {
+  handlePaperUpload,
+  handleStartGrading,
+  handleGetGradingProgress,
+  handleGetPaper,
+} from "./routes/papers";
+import { handleGetAnalytics } from "./routes/analytics";
 
 export function createServer() {
   const app = express();
@@ -11,13 +18,22 @@ export function createServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Example API routes
+  // Health check and example routes
   app.get("/api/ping", (_req, res) => {
     const ping = process.env.PING_MESSAGE ?? "ping";
     res.json({ message: ping });
   });
 
   app.get("/api/demo", handleDemo);
+
+  // Paper routes
+  app.post("/api/papers/upload", handlePaperUpload);
+  app.post("/api/papers/grade", handleStartGrading);
+  app.get("/api/papers/grade/:gradingId", handleGetGradingProgress);
+  app.get("/api/papers/:paperId", handleGetPaper);
+
+  // Analytics routes
+  app.get("/api/analytics", handleGetAnalytics);
 
   return app;
 }

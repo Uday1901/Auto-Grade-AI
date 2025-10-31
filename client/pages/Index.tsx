@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,20 +10,16 @@ import { Badge } from "@/components/ui/badge";
 import { BarChart3, CheckCircle2, Clock, FileText, Layers, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-
-interface PartConfig {
-  id: string;
-  name: string;
-  questions: number;
-  marksPerQuestion: number;
-  difficulty: "easy" | "medium" | "hard";
-  stepMarking: boolean;
-  partialCredit: number; // 0-100
-}
+import { PartConfig } from "@shared/api";
+import { api } from "@/lib/api";
 
 export default function Index() {
   const [grading, setGrading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [title, setTitle] = useState("Midterm – Mathematics (Grade 10)");
+  const [course, setCourse] = useState("Mathematics – Grade 10");
+  const [paperId, setPaperId] = useState<string | null>(null);
+  const [gradingId, setGradingId] = useState<string | null>(null);
   const [parts, setParts] = useState<PartConfig[]>([
     { id: crypto.randomUUID(), name: "Part A (Objective)", questions: 20, marksPerQuestion: 1, difficulty: "easy", stepMarking: false, partialCredit: 0 },
     { id: crypto.randomUUID(), name: "Part B (Short)", questions: 5, marksPerQuestion: 4, difficulty: "medium", stepMarking: true, partialCredit: 50 },
@@ -56,12 +52,54 @@ export default function Index() {
   const removePart = (id: string) => setParts((ps) => ps.filter((p) => p.id !== id));
   const updatePart = (id: string, patch: Partial<PartConfig>) => setParts((ps) => ps.map((p) => (p.id === id ? { ...p, ...patch } : p)));
 
-  const onStartGrading = () => {
-    toast("Uploading and parsing paper...");
-    setTimeout(() => {
-      toast("AI criteria generated", { description: "Rubrics set from question patterns and difficulty" });
-      setGrading(true);
-    }, 800);
+  const onStartGrading = async () => {
+    if (!title || !course || parts.length === 0) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      toast("Uploading and parsing paper...");
+
+      // Upload paper to backend
+      const uploadResponse = await api.uploadPaper({
+        title,
+        course,
+        parts,
+      });
+
+      if (uploadResponse.success) {
+        setPaperId(uploadResponse.paperId);
+        toast.success("Paper uploaded successfully", {
+          description: `Total marks: ${uploadResponse.totalMarks}`,
+        });
+
+        // Start grading
+        setTimeout(async () => {
+          try {
+            const gradingResponse = await api.startGrading({
+              paperId: uploadResponse.paperId,
+            });
+
+            if (gradingResponse.success) {
+              setGradingId(gradingResponse.gradingId);
+              toast("AI criteria generated", {
+                description: "Rubrics set from question patterns and difficulty",
+              });
+              setGrading(true);
+            }
+          } catch (error) {
+            toast.error("Failed to start grading", {
+              description: error instanceof Error ? error.message : "Unknown error",
+            });
+          }
+        }, 800);
+      }
+    } catch (error) {
+      toast.error("Failed to upload paper", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   };
 
   return (
@@ -152,11 +190,21 @@ export default function Index() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="title">Paper title</Label>
-                  <Input id="title" placeholder="Midterm – Mathematics (Grade 10)" />
+                  <Input
+                    id="title"
+                    placeholder="Midterm – Mathematics (Grade 10)"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="course">Course/Class</Label>
-                  <Input id="course" placeholder="Mathematics – Grade 10" />
+                  <Input
+                    id="course"
+                    placeholder="Mathematics – Grade 10"
+                    value={course}
+                    onChange={(e) => setCourse(e.target.value)}
+                  />
                 </div>
               </div>
 
