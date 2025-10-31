@@ -24,6 +24,16 @@ A production-ready full-stack React application for automated paper evaluation w
 - Set up deployment configuration for autoscale deployment
 - Created workflow 'dev' running `pnpm dev`
 
+### Backend API Integration
+- Created comprehensive shared TypeScript types in `shared/api.ts` for all API contracts
+- Implemented paper upload, grading, and analytics endpoints in Express backend
+- Added type-safe API client utility in `client/lib/api.ts`
+- Connected frontend components to backend:
+  - Index.tsx uses backend for paper upload and grading with real-time progress
+  - Dashboard.tsx fetches analytics data from backend API
+- All endpoints tested and verified working
+- Full end-to-end type safety between frontend and backend
+
 ## Project Structure
 
 ```
@@ -75,8 +85,26 @@ pnpm test       # Run Vitest tests
 ### Key Features
 
 #### API Endpoints
+
+**Health & Demo**
 - `GET /api/ping` - Health check endpoint (returns ping/pong message)
 - `GET /api/demo` - Demo endpoint
+
+**Paper Management**
+- `POST /api/papers/upload` - Upload a new question paper with configuration
+  - Request: `PaperUploadRequest` (title, course, parts)
+  - Response: `PaperUploadResponse` (paperId, totalMarks)
+- `GET /api/papers/:paperId` - Get paper details
+  - Response: `PaperDetailsResponse` (paper configuration)
+- `POST /api/papers/grade` - Start grading a paper
+  - Request: `GradingRequest` (paperId)
+  - Response: `GradingResponse` (gradingId, estimatedTime)
+- `GET /api/papers/grade/:gradingId` - Get grading progress
+  - Response: `GradingProgressResponse` (status, progress, timestamps)
+
+**Analytics**
+- `GET /api/analytics` - Get dashboard analytics data
+  - Response: `AnalyticsResponse` (overview, trends, distributions)
 
 #### Routing System
 - Powered by React Router 6 in SPA mode
