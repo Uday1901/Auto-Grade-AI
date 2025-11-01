@@ -44,6 +44,10 @@ export function Header() {
               </SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Auth controls */}
+          <AuthControls />
+
           <Button asChild>
             <Link to="/#upload" className="inline-flex items-center gap-2">
               <UploadCloud className="h-4 w-4" /> New Upload
