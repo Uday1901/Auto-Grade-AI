@@ -61,6 +61,22 @@ router.get('/google', (req, res, next) => {
   const role = req.query.role as string | undefined;
   // encode role in state
   const state = role ? role : '';
+
+  // Log diagnostics about the OAuth request
+  try {
+    const cfgCallback = process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback';
+    console.info('[auth] Initiating Google OAuth', {
+      callbackURL: cfgCallback,
+      clientIdPresent: !!process.env.GOOGLE_CLIENT_ID,
+      clientSecretPresent: !!process.env.GOOGLE_CLIENT_SECRET,
+      requestedRole: role || null,
+      host: req.get('host'),
+      origin: req.get('origin') || null,
+    });
+  } catch (e) {
+    console.warn('[auth] Failed to log OAuth initiation info', e);
+  }
+
   passport.authenticate('google', { scope: ['profile', 'email'], state })(req, res, next);
 });
 
@@ -101,6 +117,25 @@ router.get('/error', (req, res) => {
     if (safe.err) delete safe.err;
   }
   res.json({ ok: false, error: safe });
+});
+
+// Debug route to return configured OAuth redirect/callback info
+router.get('/redirect-debug', (req, res) => {
+  const callbackURL = process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback';
+  const clientId = process.env.GOOGLE_CLIENT_ID || null;
+  const clientSecretPresent = !!process.env.GOOGLE_CLIENT_SECRET;
+  const nodeEnv = process.env.NODE_ENV || 'development';
+
+  // Mask client ID partially for safety
+  const maskedClientId = clientId ? `${clientId.slice(0, 8)}...${clientId.slice(-8)}` : null;
+
+  res.json({
+    callbackURL,
+    clientId: maskedClientId,
+    clientSecretPresent,
+    nodeEnv,
+    note: 'Ensure this exact callbackURL is registered in Google Cloud Console Authorized redirect URIs',
+  });
 });
 
 // Simple route to get current user from cookie
