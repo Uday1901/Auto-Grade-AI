@@ -9,6 +9,8 @@ import {
   handleGetPaper,
 } from "./routes/papers";
 import { handleGetAnalytics } from "./routes/analytics";
+import cookieParser from 'cookie-parser';
+import authRouter from './auth';
 
 export function createServer() {
   const app = express();
