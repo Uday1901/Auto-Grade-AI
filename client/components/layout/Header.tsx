@@ -140,10 +140,10 @@ function AuthControls() {
       ) : null}
 
       <div className="flex items-center gap-2">
-        <a href="/auth/google?role=faculty" className="text-sm btn-link">
+        <a href="/auth/google?role=faculty" target="_top" rel="noopener noreferrer" className="text-sm btn-link">
           Sign in as Faculty
         </a>
-        <a href="/auth/google?role=student" className="text-sm btn-link">
+        <a href="/auth/google?role=student" target="_top" rel="noopener noreferrer" className="text-sm btn-link">
           Sign in as Student
         </a>
       </div>
