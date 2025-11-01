@@ -64,16 +64,20 @@ router.get('/google', (req, res, next) => {
   passport.authenticate('google', { scope: ['profile', 'email'], state })(req, res, next);
 });
 
+let lastAuthError: any = null;
+
 router.get('/google/callback', (req, res, next) => {
   passport.authenticate('google', { session: false }, (err: any, user: any, info: any) => {
     if (err) {
       console.error('[auth] Passport authentication error', { err, info, query: req.query });
-      return res.status(500).send('Authentication error');
+      lastAuthError = { timestamp: new Date().toISOString(), type: 'passport_error', message: (err && err.message) || String(err), info, query: req.query };
+      // Redirect user back to frontend; frontend will call /auth/error to fetch diagnostics
+      return res.redirect('/?auth_error=true');
     }
     if (!user) {
       console.warn('[auth] No user returned from passport authenticate', { info, query: req.query });
-      // Provide diagnostic info to frontend as query string for debugging (do not expose sensitive info)
-      return res.redirect('/?auth=failed');
+      lastAuthError = { timestamp: new Date().toISOString(), type: 'no_user', message: 'No user returned from Google strategy', info, query: req.query };
+      return res.redirect('/?auth_error=true');
     }
 
     try {
@@ -82,9 +86,21 @@ router.get('/google/callback', (req, res, next) => {
       return res.redirect('/');
     } catch (e) {
       console.error('[auth] Error setting auth cookie', e);
-      return res.status(500).send('Auth cookie error');
+      lastAuthError = { timestamp: new Date().toISOString(), type: 'cookie_error', message: (e && e.message) || String(e) };
+      return res.redirect('/?auth_error=true');
     }
   })(req, res, next);
+});
+
+// Debug-only endpoint to fetch the last auth error
+router.get('/error', (req, res) => {
+  if (!lastAuthError) return res.json({ ok: true, message: 'no recent auth errors' });
+  // Do not expose raw error stack in production
+  const safe = { ...lastAuthError };
+  if (process.env.NODE_ENV === 'production') {
+    if (safe.err) delete safe.err;
+  }
+  res.json({ ok: false, error: safe });
 });
 
 // Simple route to get current user from cookie
