@@ -72,3 +72,53 @@ function NavLink({ to, label, active }: { to: string; label: string; active: boo
     </Link>
   );
 }
+
+function AuthControls() {
+  // simple auth UI: sign in links and logout, show user if signed in
+  const [user, setUser] = React.useState<{ id: string; role: string; name?: string } | null>(null);
+
+  React.useEffect(() => {
+    let mounted = true;
+    fetch('/auth/me', { credentials: 'include' })
+      .then((r) => {
+        if (!r.ok) return null;
+        return r.json();
+      })
+      .then((data) => {
+        if (mounted && data) setUser(data);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  async function handleLogout() {
+    await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+    setUser(null);
+    // reload to reflect auth state
+    window.location.reload();
+  }
+
+  if (user) {
+    return (
+      <div className="flex items-center gap-3">
+        <span className="text-sm">Signed in ({user.role?.toLowerCase()})</span>
+        <button onClick={handleLogout} className="text-sm text-red-600 hover:underline">
+          Sign out
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <a href="/auth/google?role=faculty" className="text-sm btn-link">
+        Sign in as Faculty
+      </a>
+      <a href="/auth/google?role=student" className="text-sm btn-link">
+        Sign in as Student
+      </a>
+    </div>
+  );
+}
