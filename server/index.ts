@@ -17,8 +17,12 @@ export function createServer() {
 
   // Middleware
   app.use(cors());
+  app.use(cookieParser());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+
+  // Auth routes
+  app.use('/auth', authRouter);
 
   // Health check and example routes
   app.get("/api/ping", (_req, res) => {
