@@ -18,12 +18,18 @@ if (!clientID || !clientSecret) {
   console.warn('Google OAuth client ID/secret not set. Auth will not work without them.');
 }
 
+// **FIX:** Dynamically determine the application's base URL
+const appHost = process.env.REPLIT_DEV_DOMAIN || 'localhost:5000';
+const protocol = appHost.includes('localhost') ? 'http' : 'https';
+const baseURL = `${protocol}://${appHost}`;
+
 passport.use(
   new GoogleStrategy(
     {
       clientID,
       clientSecret,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback',
+      // **FIX:** Use the full, dynamic callback URL
+      callbackURL: process.env.GOOGLE_CALLBACK_URL || `${baseURL}/auth/google/callback`,
       passReqToCallback: true,
     },
     async (req: express.Request, accessToken: string, refreshToken: string, profile: any, done: any) => {
@@ -64,7 +70,8 @@ router.get('/google', (req, res, next) => {
 
   // Log diagnostics about the OAuth request
   try {
-    const cfgCallback = process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback';
+    // **FIX:** Log the full, correct callback URL
+    const cfgCallback = process.env.GOOGLE_CALLBACK_URL || `${baseURL}/auth/google/callback`;
     console.info('[auth] Initiating Google OAuth', {
       callbackURL: cfgCallback,
       clientIdPresent: !!process.env.GOOGLE_CLIENT_ID,
@@ -121,7 +128,8 @@ router.get('/error', (req, res) => {
 
 // Debug route to return configured OAuth redirect/callback info
 router.get('/redirect-debug', (req, res) => {
-  const callbackURL = process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback';
+  // **FIX:** Report the full, correct callback URL
+  const callbackURL = process.env.GOOGLE_CALLBACK_URL || `${baseURL}/auth/google/callback`;
   const clientId = process.env.GOOGLE_CLIENT_ID || null;
   const clientSecretPresent = !!process.env.GOOGLE_CLIENT_SECRET;
   const nodeEnv = process.env.NODE_ENV || 'development';
