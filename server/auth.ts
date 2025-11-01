@@ -23,16 +23,19 @@ passport.use(
     {
       clientID,
       clientSecret,
-      callbackURL: '/auth/google/callback',
+      callbackURL: process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback',
       passReqToCallback: true,
     },
     async (req: express.Request, accessToken: string, refreshToken: string, profile: any, done: any) => {
       try {
         // role may be passed via state param
         const role = (req.query.state as string) || undefined;
+        console.info(`[auth] Google callback for profile id=${profile.id} email=${profile.emails?.[0]?.value} role=${role}`);
         const user = await upsertUserFromProfile(profile, role);
+        console.info(`[auth] Upserted user id=${user.id} role=${user.role}`);
         return done(null, user);
       } catch (err) {
+        console.error('[auth] Error in GoogleStrategy verify callback', err);
         return done(err as Error);
       }
     }
@@ -61,17 +64,28 @@ router.get('/google', (req, res, next) => {
   passport.authenticate('google', { scope: ['profile', 'email'], state })(req, res, next);
 });
 
-router.get(
-  '/google/callback',
-  passport.authenticate('google', { session: false, failureRedirect: '/login' }),
-  (req: any, res) => {
-    // user available at req.user
-    const user = req.user;
-    setAuthCookie(res, user);
-    // redirect to frontend home
-    res.redirect('/');
-  }
-);
+router.get('/google/callback', (req, res, next) => {
+  passport.authenticate('google', { session: false }, (err: any, user: any, info: any) => {
+    if (err) {
+      console.error('[auth] Passport authentication error', { err, info, query: req.query });
+      return res.status(500).send('Authentication error');
+    }
+    if (!user) {
+      console.warn('[auth] No user returned from passport authenticate', { info, query: req.query });
+      // Provide diagnostic info to frontend as query string for debugging (do not expose sensitive info)
+      return res.redirect('/?auth=failed');
+    }
+
+    try {
+      setAuthCookie(res, user);
+      console.info(`[auth] User authenticated and cookie set for user id=${user.id}`);
+      return res.redirect('/');
+    } catch (e) {
+      console.error('[auth] Error setting auth cookie', e);
+      return res.status(500).send('Auth cookie error');
+    }
+  })(req, res, next);
+});
 
 // Simple route to get current user from cookie
 router.get('/me', async (req, res) => {
