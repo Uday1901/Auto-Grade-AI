@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link, useLocation } from "react-router-dom";
 import { Brain, BarChart3, UploadCloud, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
