@@ -23,6 +23,7 @@ export function createServer() {
   app.use(express.urlencoded({ extended: true }));
 
   // Auth routes
+  app.use(passport.initialize());
   app.use('/auth', authRouter);
 
   // Health check and example routes
