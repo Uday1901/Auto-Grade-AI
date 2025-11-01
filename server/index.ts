@@ -10,6 +10,7 @@ import {
 } from "./routes/papers";
 import { handleGetAnalytics } from "./routes/analytics";
 import cookieParser from 'cookie-parser';
+import passport from 'passport';
 import authRouter from './auth';
 
 export function createServer() {
