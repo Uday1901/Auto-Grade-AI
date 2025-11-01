@@ -77,6 +77,7 @@ function NavLink({ to, label, active }: { to: string; label: string; active: boo
 function AuthControls() {
   // simple auth UI: sign in links and logout, show user if signed in
   const [user, setUser] = React.useState<{ id: string; role: string; name?: string } | null>(null);
+  const [authError, setAuthError] = React.useState<any | null>(null);
 
   React.useEffect(() => {
     let mounted = true;
@@ -89,6 +90,22 @@ function AuthControls() {
         if (mounted && data) setUser(data);
       })
       .catch(() => {});
+
+    // Check URL for auth error indicator
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('auth_error') === 'true') {
+        fetch('/auth/error')
+          .then((r) => r.json())
+          .then((d) => {
+            if (mounted) setAuthError(d.error || d);
+          })
+          .catch(() => setAuthError({ message: 'Failed to fetch auth diagnostics' }));
+      }
+    } catch (e) {
+      // ignore
+    }
+
     return () => {
       mounted = false;
     };
@@ -113,13 +130,23 @@ function AuthControls() {
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <a href="/auth/google?role=faculty" className="text-sm btn-link">
-        Sign in as Faculty
-      </a>
-      <a href="/auth/google?role=student" className="text-sm btn-link">
-        Sign in as Student
-      </a>
+    <div className="flex flex-col gap-1">
+      {authError ? (
+        <div className="p-2 bg-red-50 text-red-800 rounded border border-red-200 text-xs">
+          <strong>Authentication error:</strong>
+          <div className="truncate">{authError?.message || JSON.stringify(authError)}</div>
+          <div className="mt-1 text-[10px] text-muted-foreground">Check server logs for details.</div>
+        </div>
+      ) : null}
+
+      <div className="flex items-center gap-2">
+        <a href="/auth/google?role=faculty" className="text-sm btn-link">
+          Sign in as Faculty
+        </a>
+        <a href="/auth/google?role=student" className="text-sm btn-link">
+          Sign in as Student
+        </a>
+      </div>
     </div>
   );
 }
