@@ -9,14 +9,22 @@ import {
   handleGetPaper,
 } from "./routes/papers";
 import { handleGetAnalytics } from "./routes/analytics";
+import cookieParser from 'cookie-parser';
+import passport from 'passport';
+import authRouter from './auth';
 
 export function createServer() {
   const app = express();
 
   // Middleware
   app.use(cors());
+  app.use(cookieParser());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+
+  // Auth routes
+  app.use(passport.initialize());
+  app.use('/auth', authRouter);
 
   // Health check and example routes
   app.get("/api/ping", (_req, res) => {

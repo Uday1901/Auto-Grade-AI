@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link, useLocation } from "react-router-dom";
 import { Brain, BarChart3, UploadCloud, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,10 @@ export function Header() {
               </SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Auth controls */}
+          <AuthControls />
+
           <Button asChild>
             <Link to="/#upload" className="inline-flex items-center gap-2">
               <UploadCloud className="h-4 w-4" /> New Upload
@@ -66,5 +71,82 @@ function NavLink({ to, label, active }: { to: string; label: string; active: boo
     >
       {label}
     </Link>
+  );
+}
+
+function AuthControls() {
+  // simple auth UI: sign in links and logout, show user if signed in
+  const [user, setUser] = React.useState<{ id: string; role: string; name?: string } | null>(null);
+  const [authError, setAuthError] = React.useState<any | null>(null);
+
+  React.useEffect(() => {
+    let mounted = true;
+    fetch('/auth/me', { credentials: 'include' })
+      .then((r) => {
+        if (!r.ok) return null;
+        return r.json();
+      })
+      .then((data) => {
+        if (mounted && data) setUser(data);
+      })
+      .catch(() => {});
+
+    // Check URL for auth error indicator
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('auth_error') === 'true') {
+        fetch('/auth/error')
+          .then((r) => r.json())
+          .then((d) => {
+            if (mounted) setAuthError(d.error || d);
+          })
+          .catch(() => setAuthError({ message: 'Failed to fetch auth diagnostics' }));
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  async function handleLogout() {
+    await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+    setUser(null);
+    // reload to reflect auth state
+    window.location.reload();
+  }
+
+  if (user) {
+    return (
+      <div className="flex items-center gap-3">
+        <span className="text-sm">Signed in ({user.role?.toLowerCase()})</span>
+        <button onClick={handleLogout} className="text-sm text-red-600 hover:underline">
+          Sign out
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {authError ? (
+        <div className="p-2 bg-red-50 text-red-800 rounded border border-red-200 text-xs">
+          <strong>Authentication error:</strong>
+          <div className="truncate">{authError?.message || JSON.stringify(authError)}</div>
+          <div className="mt-1 text-[10px] text-muted-foreground">Check server logs for details.</div>
+        </div>
+      ) : null}
+
+      <div className="flex items-center gap-2">
+        <a href="/auth/google?role=faculty" target="_top" rel="noopener noreferrer" className="text-sm btn-link">
+          Sign in as Faculty
+        </a>
+        <a href="/auth/google?role=student" target="_top" rel="noopener noreferrer" className="text-sm btn-link">
+          Sign in as Student
+        </a>
+      </div>
+    </div>
   );
 }
